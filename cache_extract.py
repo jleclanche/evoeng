@@ -7,6 +7,7 @@ from datetime import datetime
 from typing import List
 
 import filetime
+from lz77 import lz_decompress
 
 
 @dataclass
@@ -70,7 +71,7 @@ def handle_files(cache, toc, outdir):
 		print(entry)
 		entries.append(entry)
 
-	def get_local_path(full_path):
+	def get_local_path(full_path: str) -> str:
 		return os.path.join(outdir, full_path.lstrip("/"))
 
 	for entry in entries:
@@ -82,8 +83,10 @@ def handle_files(cache, toc, outdir):
 					os.makedirs(dirname)
 				with open(local_path, "wb") as f:
 					cache.seek(entry.offset)
-					assert entry.compressed_size == entry.size, "LZ not supported yet"
-					f.write(cache.read(entry.compressed_size))
+					if entry.compressed_size == entry.size:
+						f.write(cache.read(entry.compressed_size))
+					else:
+						f.write(lz_decompress(cache, entry.size))
 			except OSError as e:
 				sys.stderr.write(f"Cannot write {entry.full_path} - {e.strerror}\n")
 			else:
