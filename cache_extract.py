@@ -37,6 +37,9 @@ class TOC:
 		self.entries.append(entry)
 
 
+FILE_SUFFIX = "~"
+
+
 def handle_files(cache, toc, outdir):
 	assert toc.read(4) == b"\x4e\xc6\x67\x18", "Invalid TOC MAGIC"
 	toc_version, = struct.unpack("<i", toc.read(4))
@@ -74,26 +77,35 @@ def handle_files(cache, toc, outdir):
 	def get_local_path(full_path: str) -> str:
 		return os.path.join(outdir, full_path.lstrip("/"))
 
+	for directory in directories.values():
+		path = get_local_path(directory)
+		if not os.path.exists(path):
+			os.makedirs(path)
+
 	for entry in entries:
-		if not entry.is_directory:
-			local_path = get_local_path(entry.full_path)
-			dirname = os.path.dirname(local_path)
-			try:
-				if not os.path.exists(dirname):
-					os.makedirs(dirname)
-				with open(local_path, "wb") as f:
-					cache.seek(entry.offset)
-					if entry.compressed_size == entry.size:
-						f.write(cache.read(entry.compressed_size))
-					else:
-						f.write(lz_decompress(cache, entry.size))
-			except OSError as e:
-				sys.stderr.write(f"Cannot write {entry.full_path} - {e.strerror}\n")
-			else:
-				# Set write time to the entry's filetime
-				if entry.time:
-					ts = entry.time.timestamp()
-					os.utime(local_path, (ts, ts))
+		if entry.is_directory:
+			continue
+
+		local_path = get_local_path(entry.full_path)
+		if os.path.exists(local_path):
+			if os.path.isdir(local_path):
+				local_path = local_path + FILE_SUFFIX
+
+		try:
+			with open(local_path, "wb") as f:
+				cache.seek(entry.offset)
+				if entry.compressed_size == entry.size:
+					f.write(cache.read(entry.compressed_size))
+				else:
+					f.write(lz_decompress(cache, entry.size))
+		except OSError as e:
+			sys.stderr.write(f"Cannot write {entry.full_path} - {e.strerror}\n")
+			continue
+
+		# Set write time to the entry's filetime
+		if entry.time:
+			ts = entry.time.timestamp()
+			os.utime(local_path, (ts, ts))
 
 
 def main():
