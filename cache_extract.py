@@ -71,7 +71,6 @@ def handle_files(cache, toc, outdir):
 			path = directories[parent]
 
 		entry = TOCEntry(offset, file_time, compressed_size, size, scope_index, path, filename)
-		print(entry)
 		entries.append(entry)
 
 	def get_local_path(full_path: str) -> str:
@@ -91,13 +90,17 @@ def handle_files(cache, toc, outdir):
 			if os.path.isdir(local_path):
 				local_path = local_path + FILE_SUFFIX
 
+		cache.seek(entry.offset)
+		compressed = entry.compressed_size != entry.size
+		print(f"Extracting {local_path} (compressed={compressed})")
+		if compressed:
+			data = lz_decompress(cache, entry.size)
+		else:
+			data = cache.read(entry.compressed_size)
+
 		try:
 			with open(local_path, "wb") as f:
-				cache.seek(entry.offset)
-				if entry.compressed_size == entry.size:
-					f.write(cache.read(entry.compressed_size))
-				else:
-					f.write(lz_decompress(cache, entry.size))
+				f.write(data)
 		except OSError as e:
 			sys.stderr.write(f"Cannot write {entry.full_path} - {e.strerror}\n")
 			continue
