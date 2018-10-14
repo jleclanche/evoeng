@@ -54,7 +54,7 @@ def handle_files(cache, toc, outdir):
 			"<qq4i64s", data
 		)
 		filename = filename.rstrip(b"\0").decode()
-		if timestamp == -1:
+		if timestamp <= 0:
 			file_time = None
 		else:
 			file_time = filetime.to_datetime(timestamp)
@@ -84,9 +84,10 @@ def handle_files(cache, toc, outdir):
 				assert entry.compressed_size == entry.size, "LZ not supported yet"
 				f.write(cache.read(entry.compressed_size))
 
-			# Set write time to the entry's filetime
-			ts = entry.time.timestamp()
-			os.utime(local_path, (ts, ts))
+			if entry.time:
+				# Set write time to the entry's filetime
+				ts = entry.time.timestamp()
+				os.utime(local_path, (ts, ts))
 
 
 def main():
