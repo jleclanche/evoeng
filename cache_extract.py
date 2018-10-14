@@ -74,20 +74,23 @@ def handle_files(cache, toc, outdir):
 		return os.path.join(outdir, full_path.lstrip("/"))
 
 	for entry in entries:
-		local_path = get_local_path(entry.full_path)
-		if entry.is_directory:
-			if not os.path.exists(local_path):
-				os.makedirs(local_path)
-		else:
-			with open(local_path, "wb") as f:
-				cache.seek(entry.offset)
-				assert entry.compressed_size == entry.size, "LZ not supported yet"
-				f.write(cache.read(entry.compressed_size))
-
-			if entry.time:
+		if not entry.is_directory:
+			local_path = get_local_path(entry.full_path)
+			dirname = os.path.dirname(local_path)
+			try:
+				if not os.path.exists(dirname):
+					os.makedirs(dirname)
+				with open(local_path, "wb") as f:
+					cache.seek(entry.offset)
+					assert entry.compressed_size == entry.size, "LZ not supported yet"
+					f.write(cache.read(entry.compressed_size))
+			except (FileNotFoundError, PermissionError) as e:
+				sys.stderr.write(f"Cannot write {entry.full_path} - {e.strerror}\n")
+			else:
 				# Set write time to the entry's filetime
-				ts = entry.time.timestamp()
-				os.utime(local_path, (ts, ts))
+				if entry.time:
+					ts = entry.time.timestamp()
+					os.utime(local_path, (ts, ts))
 
 
 def main():
