@@ -98,6 +98,10 @@ def handle_files(cache, toc, outdir):
 		else:
 			data = cache.read(entry.compressed_size)
 
+		if os.path.exists(local_path):
+			from hashlib import md5
+			local_path += f"~{md5(data).hexdigest()[:5]}"
+
 		try:
 			with open(local_path, "wb") as f:
 				f.write(data)
