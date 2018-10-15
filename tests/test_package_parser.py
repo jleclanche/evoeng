@@ -2,7 +2,7 @@ import json
 import os
 
 import pytest
-from package_parser import GRAMMAR
+from package_parser import loads
 
 
 with open(os.path.join(os.path.dirname(__file__), "packages.json"), "r") as f:
@@ -16,4 +16,4 @@ with open(os.path.join(os.path.dirname(__file__), "packages.json"), "r") as f:
 	ids=[str(i) for i in range(len(packages))]
 )
 def test_packages(package_text):
-	assert GRAMMAR.parse(package_text)
+	assert loads(package_text)
