@@ -122,3 +122,14 @@ def _get_dict_content(node) -> Dict[str, Any]:
 def loads(text: str) -> Dict[str, Any]:
 	package = GRAMMAR.parse(text)
 	return _get_dict_content(package.children[1].children[0])
+
+
+if __name__ == "__main__":
+	import json
+	import sys
+
+	for path in sys.argv[1:]:
+		with open(path, "r") as f:
+			decoded = loads(f.read())
+
+		json.dump(decoded, sys.stdout, indent="\t")
