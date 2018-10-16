@@ -28,8 +28,8 @@ STRING_CHARS = ~'[^"]'
 QUOTED_STRING = QUOTE STRING_CHARS* QUOTE
 RAW_STRING = RAW_STRING_CHARS+
 
-INT = ~"(-)?[0-9]+"
-FLOAT = ~"(-)?[0-9]+\.[0-9]+(e(\+|\-)[0-9]+)?"
+INT = ~"(-)?[0-9]+" !~"[^\n,}]"
+FLOAT = ~"(-)?[0-9]+\.[0-9]+(e(\+|\-)[0-9]+)?" !~"[^\n,}]"
 
 NEWL = ~" *\n"
 BRACE_L = "{"
