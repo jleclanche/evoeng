@@ -1,11 +1,15 @@
 #!/usr/bin/env python
+import dataclasses
+import json
 import logging
 import sys
 from dataclasses import dataclass, field
 from io import BytesIO
-from typing import BinaryIO, List, NamedTuple, Dict
+from typing import BinaryIO, Dict, List, NamedTuple
 
 from binreader import BinaryReader
+from package_parser import loads
+
 
 logger = logging.getLogger(__name__)
 
@@ -25,45 +29,14 @@ class Package:
 
 	def __post_init__(self) -> None:
 		try:
-			self.content = self.decode()
+			text = self.raw_content.decode()
+			self.content = loads(text)
 		except Exception as e:
 			logger.exception(f"Failed to decode package {self.name}", exc_info=e)
 			self.content = None
 
-	def decode(self) -> Dict[str, object]:
-		data = {}
-		content = self.raw_content.decode()
-		lines = content.strip().replace('\r', '').splitlines()
 
-		# TODO: parse lines of text into data dict
-		# Example content is
-		# Notes:
-		"""
-		Channels={
-		{
-		LoopCount=1
-		Startup={}
-		Events={
-		{
-		Sound=CorpusDoorLaserLoopWide
-		Parameter={0,0}
-		Latency={0,0}
-		Duration=0
-		FadeTime=0
-		FadeAmount=1
-		}
-		}
-		Shutdown={}
-		}
-		}
-		"""
-		for line in lines:
-			pass
-
-		return data
-
-
-class BinFile:
+class PackagesFile:
 	def __init__(self, bin_file: BinaryIO) -> None:
 		reader = BinaryReader(bin_file)
 		self.hash = reader.read(29)
@@ -83,17 +56,17 @@ class BinFile:
 				unk=unk
 			))
 
-		self.chunks: List[bytes] = []
-
+		chunks: List[bytes] = []
 		chunksize = reader.read_int32()
 		chunk_reader = BinaryReader(BytesIO(reader.read(chunksize)))
 		num_chunks = reader.read_int32()
-
+		logger.info(f"Reading {num_chunks} chunks in {chunksize} bytes")
 		for i in range(num_chunks):
-			self.chunks.append(chunk_reader.read_cstring())
+			chunks.append(chunk_reader.read_cstring())
 
 		self.packages = []
-		for chunk in self.chunks:
+		logger.info(f"Parsing {len(chunks)} chunks into packages")
+		for chunk in chunks:
 			path = read_length_prefixed_str()
 			name = read_length_prefixed_str()
 			reader.read(5)
@@ -107,12 +80,28 @@ class BinFile:
 				raw_content=chunk,
 			))
 
+	def asdict(self) -> dict:
+		packages = []
+		for p in self.packages:
+			d = dataclasses.asdict(p)
+			del d["raw_content"]
+			packages.append(d)
+
+		return {
+			"structs": [
+				s._asdict() for s in self.structs
+			],
+			"packages": packages
+		}
+
 
 def main() -> None:
 	logging.basicConfig(level=logging.DEBUG)
 	for bin_path in sys.argv[1:]:
 		with open(bin_path, "rb") as bin_file:
-			print(BinFile(bin_file))
+			packages = PackagesFile(bin_file)
+
+		print(json.dumps(packages.asdict(), indent="\t"))
 
 
 if __name__ == "__main__":
