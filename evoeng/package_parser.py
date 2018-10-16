@@ -21,7 +21,7 @@ value = FLOAT / INT / QUOTED_STRING / RAW_STRING / LIST / DICT
 LIST = BRACE_L list_content? BRACE_R
 DICT = BRACE_L NEWL dict_content BRACE_R
 
-RAW_STRING_CHARS = ~"[^{},\n]"
+RAW_STRING_CHARS = ~'[^{},\n"]'
 DICT_KEY_CHARS = ~"[^={},\n]"
 STRING_CHARS = ~'[^"]'
 
