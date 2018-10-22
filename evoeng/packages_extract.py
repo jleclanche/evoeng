@@ -9,7 +9,8 @@ from io import BytesIO
 from typing import Any, BinaryIO, Dict, List, Tuple
 
 from binreader import BinaryReader
-from package_parser import loads
+
+from .package_parser import loads
 
 
 logger = logging.getLogger(__name__)
@@ -17,26 +18,27 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class Package:
-	name: str
+	path: str
 	parent_path: str
-	header_path: str
 	data: bytes
 
 	@property
 	def content(self) -> Dict[str, Any]:
 		return loads(self.data.decode())
 
-	@property
-	def parent_full_path(self):
-		return os.path.join(self.header_path, self.parent_path)
+	def get_full_content(self, packages_file: "PackagesFile") -> dict:
+		if not self.parent_path:
+			return self.content
 
-	@property
-	def full_path(self):
-		return os.path.join(self.header_path, self.name)
+		parent_package = packages_file._packages[self.parent_path]
+		content = parent_package.get_full_content(packages_file)
+		content.update(self.content)
+		return content
 
 
 class PackagesFile:
 	def __init__(self, bin_file: BinaryIO) -> None:
+		self._packages: Dict[str, Package] = {}
 		reader = BinaryReader(bin_file)
 		self.hash = reader.read(29)
 
@@ -46,7 +48,6 @@ class PackagesFile:
 
 		self.structs: List[Tuple[str, int]] = []
 		num_structs = reader.read_int32()
-		logger.info(f"Reading {num_structs} top level structs")
 		for _ in range(num_structs):
 			name = read_length_prefixed_str()
 			unk = reader.read_int32()
@@ -57,25 +58,25 @@ class PackagesFile:
 		chunk_reader = BinaryReader(BytesIO(reader.read(chunksize)))
 		num_chunks = reader.read_int32()
 
-		logger.info(f"Reading {num_chunks} chunks in {chunksize} bytes")
 		for i in range(num_chunks):
 			chunks.append(chunk_reader.read_cstring())
 
-		self.packages: List[Package] = []
-		logger.info(f"Parsing {len(chunks)} chunks into packages")
 		for chunk in chunks:
-			path = read_length_prefixed_str()
+			base_path = read_length_prefixed_str()
 			name = read_length_prefixed_str()
 			reader.read(5)
 			parent_path = read_length_prefixed_str()
 			reader.read(4)  # always 0
 
-			self.packages.append(Package(
-				name=name,
-				parent_path=parent_path,
-				header_path=path,
-				data=chunk,
-			))
+			path = os.path.join(base_path, name)
+			if parent_path:
+				parent_path = os.path.join(base_path, parent_path)
+
+			self._packages[path] = Package(path, parent_path, chunk)
+
+	@property
+	def packages(self):
+		return list(self._packages.values())
 
 
 def main() -> None:
@@ -85,15 +86,16 @@ def main() -> None:
 			packages = PackagesFile(bin_file)
 
 		outdir, _ = os.path.splitext(bin_path)
+
 		def get_local_path(path: str) -> str:
 			return os.path.join(outdir, path.lstrip("/"))
 
 		for package in packages.packages:
-			dirname = get_local_path(package.header_path)
+			dirname = get_local_path(os.path.dirname(package.path))
 			if not os.path.exists(dirname):
 				os.makedirs(dirname)
 
-			local_path = get_local_path(package.full_path)
+			local_path = get_local_path(package.path)
 			logger.info(f"Extracting {local_path}")
 			with open(f"{local_path}.wfpkg", "wb") as f:
 				f.write(package.data)
@@ -101,7 +103,7 @@ def main() -> None:
 			try:
 				decoded_data = package.content
 			except Exception:
-				logger.exception(f"Could not decode data for {package.full_path!r}")
+				logger.exception(f"Could not decode data for {package.path!r}")
 			else:
 				with open(f"{local_path}.json", "w") as fp:
 					json.dump(decoded_data, fp)
