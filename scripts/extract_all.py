@@ -5,6 +5,7 @@ import os
 import sys
 
 import requests
+
 from evoeng.packages_extract import PackagesFile
 
 
@@ -58,10 +59,13 @@ class Extractor:
 		for entry in entries:
 			if entry.get("tag", "") == tag_filter:
 				key = entry["type"]
-				package = self.packages[key]
+				pkgobj = self.packages._packages[key]
+				package = pkgobj.get_full_content(self.packages)
 				d = {"path": key, "id": self.get_or_save_id(key), "data": package}
 				if key in self.texture_manifest:
 					d["texture"] = self.texture_manifest[key]
+				if pkgobj.parent_path:
+					d["parent"] = pkgobj.parent_path
 				ret.append(d)
 
 		return ret
