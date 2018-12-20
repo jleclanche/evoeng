@@ -97,7 +97,10 @@ class Extractor:
 		return ret
 
 	def extract_all(self) -> dict:
-		return self.extract_for_filters(["Mod", "Warframe", "Weapon"])
+		return {
+			"Mods": self.extract_for_filters(["Mod"]),
+			"Items": self.extract_for_filters(["Warframe", "Weapon"]),
+		}
 
 
 def main() -> None:
