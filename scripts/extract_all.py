@@ -2,6 +2,7 @@
 import json
 import logging
 import os
+import posixpath
 import sys
 from typing import Dict, List, Set
 
@@ -80,6 +81,14 @@ class Extractor:
 				d = _get_package(key, pkgobj)
 				d["data"] = pkgobj.get_full_content(self.packages)
 				d["tag"] = entry["tag"]
+
+				# Resolve behaviors packages
+				for behavior in d["data"].get("Behaviors", []):
+					for k, v in behavior.items():
+						if "projectileType" in v:
+							k = posixpath.join(posixpath.dirname(key), v["projectileType"])
+							_pkgobj = self.packages._packages[k]
+							v["projectileType"] = _pkgobj.get_full_content(self.packages)
 
 				ret[key] = d
 
