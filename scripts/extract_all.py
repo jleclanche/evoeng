@@ -64,7 +64,11 @@ class Extractor:
 		def _get_package(key, pkgobj):
 			all_keys.add(key)
 			orphans.discard(key)
-			d = {"path": key, "id": self.get_or_save_id(key)}
+			d = {
+				"path": key,
+				"id": self.get_or_save_id(key),
+				"data": pkgobj.get_full_content(self.packages),
+			}
 			if key in self.texture_manifest:
 				d["texture"] = self.texture_manifest[key]
 			if pkgobj.parent_path:
@@ -79,7 +83,6 @@ class Extractor:
 
 				pkgobj = self.packages._packages[key]
 				d = _get_package(key, pkgobj)
-				d["data"] = pkgobj.get_full_content(self.packages)
 				d["tag"] = entry["tag"]
 
 				# Resolve behaviors packages
