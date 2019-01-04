@@ -22,6 +22,11 @@ def get_texture_manifest() -> dict:
 	return {o["uniqueName"]: o["textureLocation"].replace("\\", "/") for o in manifest}
 
 
+def make_absolute(key: str, base_key: str) -> str:
+	base_dir = posixpath.dirname(base_key)
+	return posixpath.join(base_dir, key)
+
+
 class Extractor:
 	def __init__(self, args):
 		bin_path = args[0]
@@ -89,9 +94,14 @@ class Extractor:
 				for behavior in d["data"].get("Behaviors", []):
 					for k, v in behavior.items():
 						if "projectileType" in v:
-							k = posixpath.join(posixpath.dirname(key), v["projectileType"])
+							k = make_absolute(v["projectileType"], key)
 							_pkgobj = self.packages._packages[k]
 							v["projectileType"] = _pkgobj.get_full_content(self.packages)
+
+				# Resolve non-absolute paths
+				item_compat = d["data"].get("ItemCompatibility", "/")
+				if not item_compat.startswith("/"):
+					d["data"]["ItemCompatibility"] = make_absolute(item_compat, key)
 
 				ret[key] = d
 
