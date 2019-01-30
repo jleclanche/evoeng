@@ -93,10 +93,15 @@ class Extractor:
 				# Resolve behaviors packages
 				for behavior in d["data"].get("Behaviors", []):
 					for k, v in behavior.items():
-						if "projectileType" in v:
-							k = make_absolute(v["projectileType"], key)
-							_pkgobj = self.packages._packages[k]
-							v["projectileType"] = _pkgobj.get_full_content(self.packages)
+						for path_key in ["projectileType", "AIMED_ACCURACY"]:
+							if path_key in v:
+								if len(v[path_key]) > 0:
+									k = make_absolute(v[path_key], key)
+									_pkgobj = self.packages._packages[k]
+									v[path_key] = _pkgobj.get_full_content(self.packages)
+								else:
+									v[path_key] = {}
+
 
 				# Resolve non-absolute paths
 				item_compat = d["data"].get("ItemCompatibility", "/")
