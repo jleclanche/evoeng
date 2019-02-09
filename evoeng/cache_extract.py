@@ -82,7 +82,7 @@ def handle_files(cache, toc, outdir):
 			os.makedirs(path)
 
 	for entry in entries:
-		if entry.is_directory:
+		if entry.is_directory or not entry.time:
 			continue
 
 		local_path = get_local_path(entry.full_path)
@@ -110,9 +110,8 @@ def handle_files(cache, toc, outdir):
 			continue
 
 		# Set write time to the entry's filetime
-		if entry.time:
-			ts = entry.time.timestamp()
-			os.utime(local_path, (ts, ts))
+		ts = entry.time.timestamp()
+		os.utime(local_path, (ts, ts))
 
 
 def main():
