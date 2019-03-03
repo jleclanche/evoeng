@@ -167,6 +167,12 @@ class Extractor:
 					if blacklisted_key in d["data"]:
 						del d["data"][blacklisted_key]
 
+				# LocTags can sometimes be "Lotus/Language/Foo/..."
+				# These appear to always be relative to the root (/)
+				# so we can safely do "/" + LocTag
+				if d["data"].get("LocTag", "").startswith("Lotus/"):
+					d["data"]["LocTag"] = "/" + d["data"]["LocTag"]
+
 				ret[key] = d
 
 		print("Processing orphan keys…")
