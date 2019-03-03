@@ -15,6 +15,38 @@ logger = logging.getLogger(__name__)
 
 MANIFEST_URL = "http://content.warframe.com/MobileExport/Manifest/ExportManifest.json"
 
+TOP_LEVEL_KEYS_BLACKLIST = {
+	"AimStartSound",
+	"AimStopSound",
+	"AttachedFX",
+	"ChannelingKillScript",
+	"DefaultCustomization",
+	"DM_AIM",
+	"FireModes",
+	"GripPositionOffset",
+	"GripRotationOffset",
+	"HitHeadSound",
+	"HitSound",
+	"HolsterBone1Name",
+	"HolsterBone1Position",
+	"HolsterBone1Rotation",
+	"HolsterPosOffset",
+	"OnRemovedScript",
+	"OwnerSetScript",
+	"PvpSlams",
+	"QuickSlamStartSound",
+	"ScanLocalSoundEffect",
+	"ScanOnKillScript",
+	"SimCollision",
+	"Slams",
+	"SoundEvents",
+	"SpecialEventInfectedScript",
+	"StateAnimations",
+	"THIRD_PERSON_ATTACHMENT",
+	"WeaponHandAimOffset",
+	"ZoomLevels",
+}
+
 
 def get_texture_manifest() -> dict:
 	print(f"Downloading {MANIFEST_URL}")
@@ -100,10 +132,8 @@ class Extractor:
 				d = _get_package(key, pkgobj)
 				d["tag"] = entry["tag"]
 
-				if (
-					entry["tag"] == "RelicsAndArcanes"
-					and "UpgradeResults" in d["data"]
-					or key.startswith("/Lotus/Types/Game/Projections/")
+				if entry["tag"] == "RelicsAndArcanes" and (
+					"UpgradeResults" in d["data"] or key.startswith("/Lotus/Types/Game/Projections/")
 				):
 					# We don't want relics
 					continue
@@ -119,6 +149,11 @@ class Extractor:
 									v[path_key] = _pkgobj.get_full_content(self.packages)
 								else:
 									v[path_key] = {}
+
+				# Clean keys we know we don't want
+				for blacklisted_key in TOP_LEVEL_KEYS_BLACKLIST:
+					if blacklisted_key in d["data"]:
+						del d["data"][blacklisted_key]
 
 				ret[key] = d
 
