@@ -100,6 +100,14 @@ class Extractor:
 				d = _get_package(key, pkgobj)
 				d["tag"] = entry["tag"]
 
+				if (
+					entry["tag"] == "RelicsAndArcanes"
+					and "UpgradeResults" in d["data"]
+					or key.startswith("/Lotus/Types/Game/Projections/")
+				):
+					# We don't want relics
+					continue
+
 				# Resolve behaviors packages
 				for behavior in d["data"].get("Behaviors", []):
 					for k, v in behavior.items():
