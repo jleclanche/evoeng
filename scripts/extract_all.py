@@ -114,6 +114,7 @@ class Extractor:
 				try:
 					pkgobj = self.packages._packages[key]
 					ret[key] = self.do_get_package(key, pkgobj)
+					self._clean_keys(ret, key)
 				except KeyError as e:
 					print(f"Cannot find key={key} ({e})")
 					self.orphans.discard(key)
@@ -145,6 +146,31 @@ class Extractor:
 
 		return ret
 
+	def _clean_keys(self, d, key):
+		# Resolve behaviors packages
+		data = d[key]["data"]
+		for behavior in data.get("Behaviors", []):
+			for k, v in behavior.items():
+				for path_key in ["projectileType", "AIMED_ACCURACY"]:
+					if path_key in v:
+						if len(v[path_key]) > 0:
+							k = make_absolute(v[path_key], key)
+							_pkgobj = self.packages._packages[k]
+							v[path_key] = _pkgobj.get_full_content(self.packages)
+						else:
+							v[path_key] = {}
+
+		# Clean keys we know we don't want
+		for blacklisted_key in TOP_LEVEL_KEYS_BLACKLIST:
+			if blacklisted_key in data:
+				del data[blacklisted_key]
+
+		# LocTags can sometimes be "Lotus/Language/Foo/..."
+		# These appear to always be relative to the root (/)
+		# so we can safely do "/" + LocTag
+		if data.get("LocTag", "").startswith("Lotus/"):
+			data = "/" + data
+
 	def extract_for_filters(self, tag_filters: List[str]) -> Dict[str, dict]:
 		print(f"Extracting: {tag_filters!r}")
 		manifest = self.packages["/Lotus/Types/Lore/PrimaryCodexManifest"]
@@ -166,30 +192,8 @@ class Extractor:
 					# We don't want relics
 					continue
 
-				# Resolve behaviors packages
-				for behavior in d["data"].get("Behaviors", []):
-					for k, v in behavior.items():
-						for path_key in ["projectileType", "AIMED_ACCURACY"]:
-							if path_key in v:
-								if len(v[path_key]) > 0:
-									k = make_absolute(v[path_key], key)
-									_pkgobj = self.packages._packages[k]
-									v[path_key] = _pkgobj.get_full_content(self.packages)
-								else:
-									v[path_key] = {}
-
-				# Clean keys we know we don't want
-				for blacklisted_key in TOP_LEVEL_KEYS_BLACKLIST:
-					if blacklisted_key in d["data"]:
-						del d["data"][blacklisted_key]
-
-				# LocTags can sometimes be "Lotus/Language/Foo/..."
-				# These appear to always be relative to the root (/)
-				# so we can safely do "/" + LocTag
-				if d["data"].get("LocTag", "").startswith("Lotus/"):
-					d["data"]["LocTag"] = "/" + d["data"]["LocTag"]
-
 				ret[key] = d
+				self._clean_keys(ret, key)
 
 		print("Processing orphan keys…")
 		self.process_orphans(ret)
