@@ -80,6 +80,16 @@ class Extractor:
 				d["parent"] = pkgobj.parent_path
 				if pkgobj.parent_path not in all_keys:
 					orphans.add(pkgobj.parent_path)
+
+			item_compat = d["data"].get("ItemCompatibility", "")
+			if item_compat:
+				# Resolve non-absolute paths
+				if not item_compat.startswith("/"):
+					item_compat = d["data"]["ItemCompatibility"] = make_absolute(item_compat, key)
+
+				# Discovery for unknown keys
+				if item_compat not in all_keys:
+					orphans.add(item_compat)
 			return d
 
 		for entry in entries:
@@ -101,12 +111,6 @@ class Extractor:
 									v[path_key] = _pkgobj.get_full_content(self.packages)
 								else:
 									v[path_key] = {}
-
-
-				# Resolve non-absolute paths
-				item_compat = d["data"].get("ItemCompatibility", "/")
-				if not item_compat.startswith("/"):
-					d["data"]["ItemCompatibility"] = make_absolute(item_compat, key)
 
 				ret[key] = d
 
