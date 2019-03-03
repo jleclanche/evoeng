@@ -70,7 +70,9 @@ def handle_files(cache, toc, outdir):
 		else:
 			path = directories[parent]
 
-		entry = TOCEntry(offset, file_time, compressed_size, size, scope_index, path, filename)
+		entry = TOCEntry(
+			offset, file_time, compressed_size, size, scope_index, path, filename
+		)
 		entries.append(entry)
 
 	def get_local_path(full_path: str) -> str:
@@ -83,6 +85,9 @@ def handle_files(cache, toc, outdir):
 
 	for entry in entries:
 		if entry.is_directory:
+			continue
+		if not entry.time:
+			print("Skipping entry without time", repr(entry))
 			continue
 
 		local_path = get_local_path(entry.full_path)
@@ -100,6 +105,7 @@ def handle_files(cache, toc, outdir):
 
 		if os.path.exists(local_path):
 			from hashlib import md5
+
 			local_path += f"~{md5(data).hexdigest()[:5]}"
 
 		try:
