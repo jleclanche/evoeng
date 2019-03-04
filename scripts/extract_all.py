@@ -142,7 +142,13 @@ class Extractor:
 		if item_compat:
 			# Resolve non-absolute paths
 			if not item_compat.startswith("/"):
-				item_compat = ret["data"]["ItemCompatibility"] = make_absolute(item_compat, key)
+				# Hack for `PowerSuits/PlayerPowerSuit`.
+				# I have no idea why that one is different.
+				# Send help.
+				if item_compat == "PowerSuits/PlayerPowerSuit":
+					ret["data"]["ItemCompatibility"] = "/Lotus/Types/Game/PowerSuits/PlayerPowerSuit"
+				else:
+					ret["data"]["ItemCompatibility"] = make_absolute(item_compat, key)
 
 		return ret
 
