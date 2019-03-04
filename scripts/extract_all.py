@@ -118,7 +118,7 @@ class Extractor:
 				except KeyError as e:
 					print(f"Cannot find key={key} ({e})")
 					self.orphans.discard(key)
-					ret[key] = {"path": key, "id": self.get_or_save_id(key)}
+					ret[key] = {"path": key, "id": self.get_or_save_id(key), "data": {}}
 
 		return ret
 
