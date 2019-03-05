@@ -240,7 +240,7 @@ def main() -> None:
 		json.dump(extractor.ids, f, indent="\t", sort_keys=True)
 
 	with open(f"data.json", "w") as f:
-		json.dump(data, f, indent="\t", sort_keys=True)
+		json.dump(data, f, indent="\t", sort_keys=True, ensure_ascii=False)
 
 
 if __name__ == "__main__":
