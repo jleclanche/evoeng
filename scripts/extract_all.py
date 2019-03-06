@@ -95,6 +95,7 @@ class Extractor:
 		self.texture_manifest = get_texture_manifest()
 		self.all_keys: Set[str] = set()
 		self.orphans: Set[str] = set()
+		self.mod_sets: Set[str] = set()
 
 		with open(bin_path, "rb") as bin_file:
 			print(f"Parsing {bin_path}")
@@ -179,6 +180,12 @@ class Extractor:
 		if data.get("LocTag", "").startswith("Lotus/"):
 			data = "/" + data
 
+		# Add ModSet to the mod sets for later use
+		if data.get("ModSet", ""):
+			# Ensure it's absolute (it never is)
+			data["ModSet"] = make_absolute(data["ModSet"], key)
+			self.mod_sets.add(data["ModSet"])
+
 	def extract_for_filters(self, tag_filters: List[str]) -> Dict[str, dict]:
 		print(f"Extracting: {tag_filters!r}")
 		manifest = self.packages["/Lotus/Types/Lore/PrimaryCodexManifest"]
@@ -208,12 +215,16 @@ class Extractor:
 
 		return ret
 
+	def get_mod_set(self, key: str):
+		return self.packages[key]
+
 	def extract_all(self) -> dict:
 		ret = {
 			"Mods": self.extract_for_filters(["Mod", "RelicsAndArcanes"]),
 			"Items": self.extract_for_filters(
 				["Sentinel", "SentinelWeapon", "Warframe", "Weapon"]
 			),
+			"ModSets": {},
 		}
 
 		# Unknown key discovery
@@ -230,6 +241,9 @@ class Extractor:
 				self.orphans.add(item_compat)
 
 		self.process_orphans(ret["Items"])
+
+		for key in self.mod_sets:
+			ret["ModSets"][key] = self.get_mod_set(key)
 
 		return ret
 
