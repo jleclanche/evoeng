@@ -180,6 +180,11 @@ class Extractor:
 		if data.get("LocTag", "").startswith("Lotus/"):
 			data = "/" + data
 
+		for upgrade in data.get("Upgrades", []):
+			loctag = upgrade.get("LocTag", "")
+			if loctag.startswith("Lotus/"):
+				upgrade["LocTag"] = "/" + loctag
+
 		# Add ModSet to the mod sets for later use
 		if data.get("ModSet", ""):
 			# Ensure it's absolute (it never is)
