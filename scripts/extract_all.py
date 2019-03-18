@@ -185,6 +185,15 @@ class Extractor:
 			if loctag.startswith("Lotus/"):
 				upgrade["LocTag"] = "/" + loctag
 
+		for i, additional_item in enumerate(data.get("AdditionalItems", [])):
+			if not additional_item.startswith("/Lotus"):
+				additional_item = make_absolute(additional_item, key)
+				data["AdditionalItems"][i] = additional_item
+				# Add it to the orphans so we parse them.
+				# Note that we generally don't want the ones that
+				# already start with /Lotus (they're skins…)
+				self.orphans.add(additional_item)
+
 		# Add ModSet to the mod sets for later use
 		if data.get("ModSet", ""):
 			# Ensure it's absolute (it never is)
