@@ -83,6 +83,13 @@ def make_absolute(key: str, base_key: str) -> str:
 	return posixpath.join(base_dir, key)
 
 
+def get_top_level_parent(package, packages):
+	while package.parent_path:
+		package = packages[package.parent_path]
+
+	return package
+
+
 class Extractor:
 	def __init__(self, args):
 		bin_path = args[0]
@@ -101,6 +108,7 @@ class Extractor:
 		self.texture_manifest = get_texture_manifest()
 		self.all_keys: Set[str] = set()
 		self.orphans: Set[str] = set()
+		self.exalted_items: Set[str] = set()
 		self.mod_sets: Set[str] = set()
 
 		with open(bin_path, "rb") as bin_file:
@@ -140,7 +148,9 @@ class Extractor:
 			"data": pkgobj.get_full_content(self.packages),
 		}
 
-		if key in self.texture_manifest:
+		manifest_key = self.texture_manifest.get(key, "")
+		icon_texture = ret["data"].get("IconTexture", "")
+		if manifest_key and manifest_key != icon_texture:
 			ret["texture"] = self.texture_manifest[key]
 		if pkgobj.parent_path:
 			ret["parent"] = pkgobj.parent_path
@@ -199,6 +209,7 @@ class Extractor:
 				# Note that we generally don't want the ones that
 				# already start with /Lotus (they're skins…)
 				self.orphans.add(additional_item)
+				self.exalted_items.add(additional_item)
 
 		# Add ModSet to the mod sets for later use
 		if data.get("ModSet", ""):
@@ -262,6 +273,23 @@ class Extractor:
 
 		self.process_orphans(ret["Items"])
 
+		# Clean exalted items so they're usable later…
+		for key in self.exalted_items:
+			item = ret["Items"][key]
+			if item["data"].get("ProductCategory", "") == "SpecialItems":
+				item["tag"] = "ExaltedItems"
+				obj = self.packages._packages[key]
+				# Iterate through parents
+				while obj.parent_path:
+					obj = self.packages._packages[obj.parent_path]
+					obj_data = obj.get_full_content(self.packages)
+					category = obj_data.get("ProductCategory", "")
+					# Find the first category that is not SpecialItems
+					if category and category != "SpecialItems":
+						item["data"]["ProductCategory"] = category
+						break
+
+		# do modsets
 		for key in self.mod_sets:
 			ret["ModSets"][key] = self.get_mod_set(key)
 
